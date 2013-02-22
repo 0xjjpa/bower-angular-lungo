@@ -7,9 +7,8 @@ var AppRouter = function(Lungo, $location, $scope) {
 
   $location.replace = function() {
     $location.$$replace = true;
-    routingHistory = [];
     return $location;
-  };
+  }
 
   var showSection = function(path) {
     var pathParts = path.split('/');
@@ -17,7 +16,7 @@ var AppRouter = function(Lungo, $location, $scope) {
     var sectionName = pathParts[1] !== '' ? pathParts[1] : 'main';
     
     if(pathParts.length > sectionPathLength) {
-      Lungo.Router.article(pathParts[0], pathParts[1]);
+      Lungo.Router.article(sectionName, pathParts[2]);
     }
     else {
       console.log('AppRouter::showSection - transitioning to ', sectionName);
@@ -71,7 +70,7 @@ var AppRouter = function(Lungo, $location, $scope) {
 
 };
 
-angular.module('Centralway.angular-lungo-bridge', [])
+angular.module('Centralway.lungo-angular-bridge', [])
 	.directive('cwRouting', function($location) {
 		return {
 			restrict: 'ECA',
@@ -106,6 +105,11 @@ angular.module('Centralway.angular-lungo-bridge', [])
         destroyLastScope();
       }
 
+      function removePreviouslyLoadedContent(contentId) {
+        var existingElement = angular.element(Lungo.dom('#' + contentId)[0]);
+        existingElement.remove();
+      }
+
       function update() {
       	console.log('cw-view::update() - Performing content update');
         var locals = $route.current && $route.current.locals,
@@ -113,10 +117,20 @@ angular.module('Centralway.angular-lungo-bridge', [])
 
         if (template) {
           var targetContainer = element.parent();
-          
-          targetContainer.append(template);
 
+          if($route.current.$route.sectionId) {
+            removePreviouslyLoadedContent($route.current.$route.sectionId);
+          }
+
+          targetContainer.append(template);  
           var newElement = angular.element(targetContainer.children()[targetContainer.children().length - 1]);
+          if(newElement.attr('id')) {
+            $route.current.$route.sectionId = newElement.attr('id');
+          }
+          else {
+            throw new Error('Elements loaded via templates must have an ID attribute');
+          }
+          Lungo.Boot.Data.init('#' + newElement.attr('id'));
           
           destroyLastScope();
 
